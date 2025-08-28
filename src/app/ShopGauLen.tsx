@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,14 +14,30 @@ import { ShoppingCart, Search, Plus, Minus, Trash2, Package, Truck, Phone, Mail,
 
 const VND = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
 
-const SAMPLE_PRODUCTS = [
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  tag: string;
+  size: string;
+  colors: string[];
+};
+
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+  selectedColor: string;
+};
+
+const SAMPLE_PRODUCTS: Product[] = [
   {
     id: "bear-classic",
     name: "Gấu Len Classic",
     price: 159000,
-    images: [
-      "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=1200&auto=format&fit=crop",
-    ],
+    images: ["https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=1200&auto=format&fit=crop"],
     tag: "Best-seller",
     size: "15cm",
     colors: ["Nâu", "Kem", "Hồng"],
@@ -29,9 +46,7 @@ const SAMPLE_PRODUCTS = [
     id: "bear-couple",
     name: "Cặp Gấu Tình Nhân",
     price: 299000,
-    images: [
-      "https://images.unsplash.com/photo-1601758124169-3b8a0c6d3a9a?q=80&w=1200&auto=format&fit=crop",
-    ],
+    images: ["https://images.unsplash.com/photo-1601758124169-3b8a0c6d3a9a?q=80&w=1200&auto=format&fit=crop"],
     tag: "Combo",
     size: "18cm",
     colors: ["Kem", "Hồng", "Xám"],
@@ -40,9 +55,7 @@ const SAMPLE_PRODUCTS = [
     id: "bear-graduation",
     name: "Gấu Tốt Nghiệp",
     price: 189000,
-    images: [
-      "https://images.unsplash.com/photo-1469719847081-2233588bcd57?q=80&w=1200&auto=format&fit=crop",
-    ],
+    images: ["https://images.unsplash.com/photo-1469719847081-2233588bcd57?q=80&w=1200&auto=format&fit=crop"],
     tag: "Quà tặng",
     size: "20cm",
     colors: ["Nâu", "Kem"],
@@ -51,21 +64,31 @@ const SAMPLE_PRODUCTS = [
     id: "bear-bouquet",
     name: "Bó Gấu Len Mini (5 con)",
     price: 259000,
-    images: [
-      "https://images.unsplash.com/photo-1589550958981-1563c2f45a03?q=80&w=1200&auto=format&fit=crop",
-    ],
+    images: ["https://images.unsplash.com/photo-1589550958981-1563c2f45a03?q=80&w=1200&auto=format&fit=crop"],
     tag: "Hoa gấu",
     size: "10cm",
     colors: ["Mix màu"],
   },
 ];
 
-function ProductCard({ p, add }: { p: any; add: (i: any) => void }) {
+function ProductCard({
+  p,
+  add,
+}: {
+  p: Product;
+  add: (i: Product & { selectedColor: string }) => void;
+}) {
   const [color, setColor] = useState<string>(p.colors?.[0] ?? "Mặc định");
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="aspect-square w-full overflow-hidden">
-        <img src={p.images?.[0]} alt={p.name} className="h-full w-full object-cover" />
+      <div className="relative aspect-square w-full overflow-hidden">
+        <Image
+          src={p.images?.[0]}
+          alt={p.name}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          className="object-cover"
+        />
       </div>
       <CardHeader className="space-y-2">
         <div className="flex items-center justify-between">
@@ -84,7 +107,7 @@ function ProductCard({ p, add }: { p: any; add: (i: any) => void }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {p.colors?.map((c: string) => (
+              {p.colors?.map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
                 </SelectItem>
@@ -110,11 +133,19 @@ function DevTests() {
           [p.name, p.tag, p.size, ...(p.colors || [])].join(" ").toLowerCase().includes(k.toLowerCase())
         );
       console.assert(filter("tốt nghiệp").some((p) => p.id === "bear-graduation"), "Search should match 'Gấu Tốt Nghiệp'");
-      const testCart = [{ price: 100, qty: 2 }, { price: 50, qty: 1 }];
+      const testCart = [
+        { price: 100, qty: 2 },
+        { price: 50, qty: 1 },
+      ];
       const subtotal = testCart.reduce((s, x) => s + x.price * x.qty, 0);
       console.assert(subtotal === 250, "Subtotal should sum correctly");
-      const email = `mailto:${"huynhminhkhang262@gmail.com"}?subject=${encodeURIComponent("Đơn hàng mới – Test")}&body=${encodeURIComponent("body")}`;
-      console.assert(email.startsWith("mailto:huynhminhkhang262@gmail.com?subject="), "Mailto should target owner's email");
+      const email = `mailto:${"huynhminhkhang262@gmail.com"}?subject=${encodeURIComponent(
+        "Đơn hàng mới – Test"
+      )}&body=${encodeURIComponent("body")}`;
+      console.assert(
+        email.startsWith("mailto:huynhminhkhang262@gmail.com?subject="),
+        "Mailto should target owner's email"
+      );
       console.log("Dev tests passed ✅");
     } catch (e) {
       console.error("Dev tests failed ❌", e);
@@ -126,11 +157,9 @@ function DevTests() {
 export default function ShopGauLen() {
   const [q, setQ] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
-  const [cart, setCart] = useState<Array<{ id: string; name: string; price: number; qty: number; selectedColor: string }>>(
-    []
-  );
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  const addToCart = (item: any) => {
+  const addToCart = (item: Product & { selectedColor: string }) => {
     setCart((prev) => {
       const idx = prev.findIndex((x) => x.id === item.id && x.selectedColor === item.selectedColor);
       if (idx >= 0) {
@@ -149,7 +178,9 @@ export default function ShopGauLen() {
   const items = useMemo(() => {
     const k = q.trim().toLowerCase();
     if (!k) return SAMPLE_PRODUCTS;
-    return SAMPLE_PRODUCTS.filter((p) => [p.name, p.tag, p.size, ...(p.colors || [])].join(" ").toLowerCase().includes(k));
+    return SAMPLE_PRODUCTS.filter((p) =>
+      [p.name, p.tag, p.size, ...(p.colors || [])].join(" ").toLowerCase().includes(k)
+    );
   }, [q]);
 
   const subtotal = cart.reduce((s, x) => s + x.price * x.qty, 0);
@@ -161,14 +192,24 @@ export default function ShopGauLen() {
       <header className="sticky top-0 z-30 backdrop-blur bg-white/70 border-b">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" className="h-8 w-8" alt="bear icon" />
+            <Image
+              src="https://cdn-icons-png.flaticon.com/512/616/616408.png"
+              alt="bear icon"
+              width={32}
+              height={32}
+            />
             <h1 className="text-xl md:text-2xl font-bold">Shop Gấu Len</h1>
             <Badge className="hidden md:inline-flex ml-2">Handmade tại Việt Nam</Badge>
           </div>
           <div className="flex items-center gap-2 w-full max-w-md">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm: gấu tốt nghiệp, bó gấu, màu hồng…" className="pl-8" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Tìm: gấu tốt nghiệp, bó gấu, màu hồng…"
+                className="pl-8"
+              />
             </div>
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
               <SheetTrigger asChild>
@@ -222,8 +263,12 @@ export default function ShopGauLen() {
       <section className="mx-auto max-w-6xl px-4 pt-8 pb-4">
         <div className="rounded-2xl bg-white p-6 md:p-8 shadow-sm grid md:grid-cols-2 gap-6 items-center">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold leading-tight">Gấu len thủ công – Quà tặng ấm áp, đáng yêu</h2>
-            <p className="mt-2 text-muted-foreground">Chọn mẫu, chọn màu, thêm lời nhắn. Shop nhận làm theo yêu cầu và giao nhanh toàn quốc.</p>
+            <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+              Gấu len thủ công – Quà tặng ấm áp, đáng yêu
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              Chọn mẫu, chọn màu, thêm lời nhắn. Shop nhận làm theo yêu cầu và giao nhanh toàn quốc.
+            </p>
             <ul className="mt-4 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Truck className="h-4 w-4" /> Ship hỏa tốc nội thành
@@ -239,11 +284,14 @@ export default function ShopGauLen() {
               </li>
             </ul>
           </div>
-          <div className="rounded-xl overflow-hidden">
-            <img
+          <div className="relative rounded-xl overflow-hidden h-[260px] md:h-[360px]">
+            <Image
               src="https://images.unsplash.com/photo-1606115915090-0ebe3d2e8b9a?q=80&w=1600&auto=format&fit=crop"
               alt="Crochet bears"
-              className="w-full h-full object-cover"
+              fill
+              sizes="100vw"
+              className="object-cover"
+              priority
             />
           </div>
         </div>
@@ -298,7 +346,7 @@ function CheckoutDialog({
   subtotal,
   clearCart,
 }: {
-  cart: Array<{ id: string; name: string; price: number; qty: number; selectedColor: string }>;
+  cart: CartItem[];
   subtotal: number;
   clearCart: () => void;
 }) {
@@ -330,9 +378,9 @@ function CheckoutDialog({
   const submit = () => {
     if (!cart.length) return alert("Giỏ hàng trống");
     if (!name || !phone || !address) return alert("Vui lòng điền đủ tên, SĐT, địa chỉ");
-    const mailto = `mailto:huynhminhkhang262@gmail.com?subject=${encodeURIComponent("Đơn hàng mới – " + name)}&body=${encodeURIComponent(
-      orderText
-    )}`;
+    const mailto = `mailto:huynhminhkhang262@gmail.com?subject=${encodeURIComponent(
+      "Đơn hàng mới – " + name
+    )}&body=${encodeURIComponent(orderText)}`;
     window.location.href = mailto; // no-backend checkout
     navigator.clipboard?.writeText(orderText);
     setOpen(false);
